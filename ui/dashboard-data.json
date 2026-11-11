@@ -1,0 +1,126 @@
+{
+  "method": "tiktoken o200k_base (measured)",
+  "summary": {
+    "flagship_scenario": "Grocery checkout within mandate",
+    "flagship_ratio": 2.24,
+    "flagship_prose_tokens": 407,
+    "flagship_packet_tokens": 182,
+    "total_prose_tokens": 1056,
+    "total_packet_tokens": 514,
+    "total_tokens_saved": 542,
+    "best_sweep_ratio": 2.38,
+    "best_sweep_items": 40
+  },
+  "scenarios": [
+    {
+      "items": 15,
+      "prose_tokens": 407,
+      "packet_tokens": 182,
+      "tokens_saved": 225,
+      "ratio": 2.24,
+      "verdict": "approved",
+      "amount": "$134.24",
+      "amount_cents": 13424,
+      "scenario": "Grocery checkout within mandate",
+      "checksum": "2fd97b92"
+    },
+    {
+      "items": 1,
+      "prose_tokens": 104,
+      "packet_tokens": 63,
+      "tokens_saved": 41,
+      "ratio": 1.65,
+      "verdict": "blocked",
+      "amount": "$259.99",
+      "amount_cents": 25999,
+      "scenario": "Electronics order over mandate cap",
+      "checksum": "79334c67"
+    },
+    {
+      "items": 1,
+      "prose_tokens": 138,
+      "packet_tokens": 87,
+      "tokens_saved": 51,
+      "ratio": 1.59,
+      "verdict": "approved",
+      "amount": "$59.99",
+      "amount_cents": 5999,
+      "scenario": "Hostile marketplace listing (literal lane)",
+      "checksum": "d6ca712c"
+    },
+    {
+      "items": 15,
+      "prose_tokens": 407,
+      "packet_tokens": 182,
+      "tokens_saved": 225,
+      "ratio": 2.24,
+      "verdict": "blocked",
+      "amount": "$134.24",
+      "amount_cents": 13424,
+      "scenario": "Tampered packet (price altered post-seal)",
+      "checksum": "2fd97b92"
+    }
+  ],
+  "sweep": [
+    {
+      "items": 1,
+      "prose_tokens": 107,
+      "packet_tokens": 66,
+      "tokens_saved": 41,
+      "ratio": 1.62,
+      "verdict": "approved",
+      "amount": "$6.98",
+      "amount_cents": 698
+    },
+    {
+      "items": 3,
+      "prose_tokens": 149,
+      "packet_tokens": 85,
+      "tokens_saved": 64,
+      "ratio": 1.75,
+      "verdict": "approved",
+      "amount": "$22.27",
+      "amount_cents": 2227
+    },
+    {
+      "items": 5,
+      "prose_tokens": 193,
+      "packet_tokens": 102,
+      "tokens_saved": 91,
+      "ratio": 1.89,
+      "verdict": "approved",
+      "amount": "$53.73",
+      "amount_cents": 5373
+    },
+    {
+      "items": 10,
+      "prose_tokens": 301,
+      "packet_tokens": 146,
+      "tokens_saved": 155,
+      "ratio": 2.06,
+      "verdict": "approved",
+      "amount": "$104.55",
+      "amount_cents": 10455
+    },
+    {
+      "items": 20,
+      "prose_tokens": 517,
+      "packet_tokens": 230,
+      "tokens_saved": 287,
+      "ratio": 2.25,
+      "verdict": "approved",
+      "amount": "$217.73",
+      "amount_cents": 21773
+    },
+    {
+      "items": 40,
+      "prose_tokens": 949,
+      "packet_tokens": 399,
+      "tokens_saved": 550,
+      "ratio": 2.38,
+      "verdict": "approved",
+      "amount": "$587.28",
+      "amount_cents": 58728
+    }
+  ]
+}

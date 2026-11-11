@@ -1,0 +1,1316 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="color-scheme" content="light dark" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data:; base-uri 'none'; form-action 'none'" />
+    <link rel="icon" href="data:," />
+    <title>AI Output Verifier</title>
+    <style>
+      :root {
+        color-scheme: light dark;
+        --bg: #f6f5f1;
+        --surface: #ffffff;
+        --surface-2: #efeee8;
+        --ink: #191c1f;
+        --ink-2: #454b52;
+        --ink-3: #7d848c;
+        --line: #dedbd2;
+        --line-strong: #c9c5b8;
+        --accent: #0d6a57;
+        --accent-strong: #084f40;
+        --accent-soft: #e3efec;
+        --ok: #1c7a35;
+        --ok-bg: #e6f3e9;
+        --ok-line: #b9dcc2;
+        --warn: #8f5d05;
+        --warn-bg: #fbf0d7;
+        --warn-line: #ecd3a0;
+        --bad: #b03327;
+        --bad-bg: #fbeae7;
+        --bad-line: #efc2bb;
+        --shadow: 0 1px 2px rgba(25, 28, 31, 0.05), 0 8px 28px rgba(25, 28, 31, 0.06);
+        --radius: 10px;
+      }
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --bg: #101214;
+          --surface: #171a1d;
+          --surface-2: #1e2226;
+          --ink: #e9ebee;
+          --ink-2: #aeb5bd;
+          --ink-3: #7e868f;
+          --line: #2b3036;
+          --line-strong: #3a4048;
+          --accent: #45c4a9;
+          --accent-strong: #6fd6bf;
+          --accent-soft: #17332c;
+          --ok: #5ec97b;
+          --ok-bg: #17301d;
+          --ok-line: #2c5236;
+          --warn: #e3ac45;
+          --warn-bg: #382b10;
+          --warn-line: #5f4a1e;
+          --bad: #ef8577;
+          --bad-bg: #3a1d18;
+          --bad-line: #63352c;
+          --shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 0 8px 28px rgba(0, 0, 0, 0.35);
+        }
+      }
+      * { box-sizing: border-box; }
+      html { -webkit-text-size-adjust: 100%; }
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--ink);
+        font-family: system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        font-size: 16px;
+        line-height: 1.55;
+      }
+      .wrap {
+        max-width: 920px;
+        margin: 0 auto;
+        padding: 28px 20px 64px;
+      }
+      .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+
+      /* ---------- header ---------- */
+      .suite-line {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: baseline;
+        gap: 6px 12px;
+        font-size: 13px;
+        color: var(--ink-3);
+        margin-bottom: 10px;
+      }
+      .suite-line .suite-name { font-weight: 600; color: var(--ink-2); letter-spacing: 0.01em; }
+      h1 {
+        font-size: clamp(26px, 4.6vw, 36px);
+        line-height: 1.15;
+        font-weight: 700;
+        letter-spacing: -0.015em;
+        margin: 0 0 10px;
+      }
+      .lede {
+        font-size: 17px;
+        color: var(--ink-2);
+        margin: 0 0 26px;
+        max-width: 62ch;
+      }
+      .lede strong { color: var(--ink); font-weight: 600; }
+
+      /* ---------- module tabs ---------- */
+      .modules {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 10px;
+        margin-bottom: 8px;
+      }
+      .module {
+        appearance: none;
+        text-align: left;
+        font: inherit;
+        cursor: pointer;
+        background: var(--surface);
+        border: 1px solid var(--line);
+        border-radius: var(--radius);
+        padding: 12px 14px;
+        color: var(--ink);
+      }
+      .module .m-num {
+        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+        font-size: 12px;
+        color: var(--ink-3);
+        display: block;
+        margin-bottom: 2px;
+      }
+      .module .m-name { font-weight: 700; font-size: 16px; display: block; }
+      .module .m-desc { font-size: 13px; color: var(--ink-2); display: block; margin-top: 2px; line-height: 1.4; }
+      .module .m-state {
+        display: inline-block;
+        margin-top: 8px;
+        font-size: 11.5px;
+        font-weight: 600;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+        padding: 2px 8px;
+        border-radius: 999px;
+        background: var(--surface-2);
+        color: var(--ink-2);
+      }
+      .module.active { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
+      .module.active .m-state { background: var(--accent-soft); color: var(--accent-strong); }
+      .module:focus-visible, button:focus-visible, textarea:focus-visible {
+        outline: 2px solid var(--accent);
+        outline-offset: 2px;
+      }
+      .module-note {
+        font-size: 13.5px;
+        color: var(--ink-2);
+        min-height: 1.4em;
+        margin: 6px 2px 20px;
+      }
+
+      /* ---------- checker card ---------- */
+      .card {
+        background: var(--surface);
+        border: 1px solid var(--line);
+        border-radius: 14px;
+        box-shadow: var(--shadow);
+        padding: 20px;
+      }
+      .card label.field-label {
+        display: block;
+        font-weight: 600;
+        font-size: 15px;
+        margin-bottom: 8px;
+      }
+      textarea {
+        width: 100%;
+        min-height: 168px;
+        resize: vertical;
+        font: inherit;
+        font-size: 15.5px;
+        line-height: 1.55;
+        color: var(--ink);
+        background: var(--bg);
+        border: 1px solid var(--line-strong);
+        border-radius: var(--radius);
+        padding: 12px 14px;
+      }
+      textarea::placeholder { color: var(--ink-3); }
+      .under-input {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: space-between;
+        gap: 4px 12px;
+        font-size: 12.5px;
+        color: var(--ink-3);
+        margin-top: 6px;
+      }
+      .stakes { margin-top: 18px; }
+      .stakes .stakes-label { font-size: 13.5px; font-weight: 600; color: var(--ink-2); margin-bottom: 8px; }
+      .chips { display: flex; flex-wrap: wrap; gap: 8px; }
+      .chip {
+        appearance: none;
+        font: inherit;
+        font-size: 14px;
+        cursor: pointer;
+        padding: 7px 13px;
+        border-radius: 999px;
+        border: 1px solid var(--line-strong);
+        background: var(--surface);
+        color: var(--ink-2);
+      }
+      .chip[aria-pressed="true"] {
+        background: var(--accent-soft);
+        border-color: var(--accent);
+        color: var(--accent-strong);
+        font-weight: 600;
+      }
+      .actions {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 10px;
+        margin-top: 20px;
+      }
+      .btn-primary {
+        appearance: none;
+        font: inherit;
+        font-size: 16px;
+        font-weight: 600;
+        cursor: pointer;
+        background: var(--accent);
+        color: #fff;
+        border: 1px solid var(--accent);
+        border-radius: var(--radius);
+        padding: 12px 26px;
+      }
+      @media (prefers-color-scheme: dark) {
+        .btn-primary { color: #0b1512; }
+      }
+      .btn-primary:hover { background: var(--accent-strong); border-color: var(--accent-strong); }
+      .btn-ghost {
+        appearance: none;
+        font: inherit;
+        font-size: 14.5px;
+        cursor: pointer;
+        background: transparent;
+        color: var(--ink-2);
+        border: 1px solid var(--line-strong);
+        border-radius: var(--radius);
+        padding: 11px 16px;
+      }
+      .btn-ghost:hover { color: var(--ink); border-color: var(--ink-3); }
+      .samples {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 8px;
+        margin-top: 16px;
+        padding-top: 16px;
+        border-top: 1px solid var(--line);
+        font-size: 13.5px;
+        color: var(--ink-3);
+      }
+      .sample-btn {
+        appearance: none;
+        font: inherit;
+        font-size: 13.5px;
+        cursor: pointer;
+        background: var(--surface-2);
+        color: var(--ink);
+        border: 1px solid var(--line);
+        border-radius: 999px;
+        padding: 6px 12px;
+      }
+      .sample-btn:hover { border-color: var(--ink-3); }
+      .form-msg { font-size: 14px; color: var(--bad); margin-top: 12px; min-height: 1.2em; }
+
+      /* ---------- results ---------- */
+      #results { margin-top: 26px; }
+      #results[hidden] { display: none; }
+      .verdict {
+        border-radius: 14px;
+        border: 1px solid;
+        padding: 20px 22px;
+      }
+      .verdict.ok { background: var(--ok-bg); border-color: var(--ok-line); }
+      .verdict.warn { background: var(--warn-bg); border-color: var(--warn-line); }
+      .verdict.bad { background: var(--bad-bg); border-color: var(--bad-line); }
+      .verdict .v-word {
+        font-size: clamp(22px, 4vw, 28px);
+        font-weight: 700;
+        letter-spacing: -0.01em;
+        margin: 0 0 4px;
+      }
+      .verdict.ok .v-word { color: var(--ok); }
+      .verdict.warn .v-word { color: var(--warn); }
+      .verdict.bad .v-word { color: var(--bad); }
+      .verdict .v-why { margin: 0; font-size: 16px; color: var(--ink); max-width: 64ch; }
+      .verdict .v-stakes { margin: 8px 0 0; font-size: 14.5px; color: var(--ink-2); }
+      .meta-row {
+        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+        font-size: 13px;
+        color: var(--ink-2);
+        margin: 14px 2px 0;
+      }
+      .section-title {
+        font-size: 15px;
+        font-weight: 700;
+        letter-spacing: 0.01em;
+        margin: 30px 0 10px;
+      }
+      .section-title .hint { font-weight: 400; color: var(--ink-3); font-size: 13.5px; margin-left: 6px; }
+      .first-check {
+        background: var(--surface);
+        border: 1px solid var(--line-strong);
+        border-radius: var(--radius);
+        padding: 16px 18px;
+        box-shadow: var(--shadow);
+      }
+      .first-check .fc-tag {
+        font-size: 11.5px;
+        font-weight: 700;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        color: var(--accent-strong);
+        margin-bottom: 6px;
+      }
+      .first-check .fc-title { font-weight: 600; font-size: 16.5px; margin: 0 0 4px; }
+      .first-check .fc-action { margin: 0; color: var(--ink-2); font-size: 15px; }
+      blockquote.snippet {
+        margin: 10px 0 0;
+        padding: 10px 12px;
+        background: var(--surface-2);
+        border-radius: 8px;
+        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+        font-size: 13px;
+        line-height: 1.5;
+        color: var(--ink-2);
+        overflow-wrap: anywhere;
+      }
+      .finding {
+        display: grid;
+        grid-template-columns: 14px 1fr;
+        gap: 4px 12px;
+        padding: 13px 2px;
+        border-bottom: 1px solid var(--line);
+      }
+      .finding:last-child { border-bottom: none; }
+      .dot {
+        width: 10px; height: 10px; border-radius: 50%;
+        margin-top: 6px;
+      }
+      .dot.high { background: var(--bad); }
+      .dot.med { background: var(--warn); }
+      .dot.low { background: var(--ink-3); }
+      .finding .f-head { display: flex; flex-wrap: wrap; gap: 4px 10px; align-items: baseline; }
+      .finding .f-title { font-weight: 600; font-size: 15.5px; }
+      .finding .f-sev { font-size: 12px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: var(--ink-3); }
+      .finding .f-action { color: var(--ink-2); font-size: 14.5px; margin-top: 2px; }
+      .finding blockquote.snippet { grid-column: 2; margin-top: 8px; }
+      .rollup { font-size: 14px; color: var(--ink-3); padding: 10px 2px 0; }
+
+      /* figures */
+      .figures-card {
+        background: var(--surface);
+        border: 1px solid var(--line);
+        border-radius: var(--radius);
+        overflow: hidden;
+      }
+      .fig-row {
+        display: grid;
+        grid-template-columns: 130px 1fr auto;
+        gap: 6px 14px;
+        align-items: baseline;
+        padding: 10px 16px;
+        border-bottom: 1px solid var(--line);
+      }
+      .fig-row:last-child { border-bottom: none; }
+      .fig-val { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-weight: 600; font-size: 15px; }
+      .fig-ctx { font-size: 13.5px; color: var(--ink-2); overflow-wrap: anywhere; }
+      .fig-status { font-size: 12px; font-weight: 600; white-space: nowrap; }
+      .fig-status.sourced { color: var(--ok); }
+      .fig-status.unsourced { color: var(--warn); }
+      .fig-empty { padding: 14px 16px; color: var(--ink-2); font-size: 14.5px; }
+      .links-line { font-size: 13.5px; color: var(--ink-2); margin-top: 10px; overflow-wrap: anywhere; }
+
+      /* decision + packet */
+      .decision { display: flex; flex-wrap: wrap; gap: 8px; }
+      .decision button {
+        appearance: none;
+        font: inherit;
+        font-size: 15px;
+        font-weight: 500;
+        cursor: pointer;
+        padding: 10px 18px;
+        border-radius: var(--radius);
+        border: 1px solid var(--line-strong);
+        background: var(--surface);
+        color: var(--ink);
+      }
+      .decision button[aria-pressed="true"] {
+        background: var(--accent-soft);
+        border-color: var(--accent);
+        color: var(--accent-strong);
+        font-weight: 600;
+      }
+      .packet {
+        background: var(--surface);
+        border: 1px solid var(--line);
+        border-radius: var(--radius);
+        padding: 16px 18px;
+      }
+      .packet p { margin: 0 0 10px; font-size: 14.5px; color: var(--ink-2); }
+      .packet pre {
+        margin: 0;
+        background: var(--surface-2);
+        border-radius: 8px;
+        padding: 12px 14px;
+        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+        font-size: 12.5px;
+        line-height: 1.6;
+        white-space: pre-wrap;
+        overflow-wrap: anywhere;
+        color: var(--ink);
+        max-height: 260px;
+        overflow-y: auto;
+      }
+      .packet .packet-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+      .packet details { margin-top: 12px; }
+      .packet summary { cursor: pointer; font-size: 13.5px; color: var(--ink-2); }
+      .copy-note { font-size: 13px; color: var(--ok); min-height: 1.2em; }
+
+      /* ---------- evidence ---------- */
+      .evidence { margin-top: 54px; }
+      .evidence h2 {
+        font-size: 21px;
+        font-weight: 700;
+        letter-spacing: -0.01em;
+        margin: 0 0 6px;
+      }
+      .evidence .e-lede { color: var(--ink-2); margin: 0 0 20px; max-width: 64ch; font-size: 15.5px; }
+      .stats {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 12px;
+      }
+      .stat {
+        background: var(--surface);
+        border: 1px solid var(--line);
+        border-radius: var(--radius);
+        padding: 16px 18px;
+      }
+      .stat .s-num {
+        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+        font-size: 27px;
+        font-weight: 600;
+        letter-spacing: -0.02em;
+        display: block;
+        margin-bottom: 4px;
+      }
+      .stat .s-claim { font-size: 14.5px; color: var(--ink); display: block; line-height: 1.45; }
+      .stat .s-src { font-size: 12.5px; color: var(--ink-3); display: block; margin-top: 8px; }
+      .footnote {
+        font-size: 13px;
+        color: var(--ink-3);
+        margin-top: 16px;
+        max-width: 68ch;
+      }
+      footer {
+        margin-top: 48px;
+        padding-top: 18px;
+        border-top: 1px solid var(--line);
+        font-size: 13.5px;
+        color: var(--ink-3);
+        max-width: 68ch;
+      }
+
+      @media (max-width: 640px) {
+        .wrap { padding: 20px 14px 48px; }
+        .modules { grid-template-columns: 1fr; }
+        .module .m-desc { display: inline; }
+        .card { padding: 16px; }
+        .stats { grid-template-columns: 1fr; }
+        .fig-row { grid-template-columns: 1fr auto; }
+        .fig-ctx { grid-column: 1 / -1; order: 3; }
+        .btn-primary { width: 100%; }
+        .actions .btn-ghost { flex: 1; }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        * { transition: none !important; }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="wrap">
+      <div class="suite-line">
+        <span class="suite-name">Real Ninjas Intelligence - Orchestration Suite</span>
+        <span>Module 1 of 3 · Verify</span>
+        <span>Original work · Real Ninjas Intelligence</span>
+      </div>
+
+      <h1>Check an AI output before you act on it.</h1>
+      <p class="lede">
+        Paste output produced by an AI system or an agent. The result is <strong>one verdict</strong>,
+        <strong>one first check</strong>, and <strong>every figure in one list</strong>
+        for comparison against the source.
+      </p>
+
+      <div class="modules" role="group" aria-label="Suite modules">
+        <button type="button" class="module active" data-module="verify" aria-pressed="true">
+          <span class="m-num">01</span>
+          <span class="m-name">Verify</span>
+          <span class="m-desc">Verification of an output before use.</span>
+          <span class="m-state">Active</span>
+        </button>
+        <button type="button" class="module" data-module="steer" aria-pressed="false">
+          <span class="m-num">02</span>
+          <span class="m-name">Steer</span>
+          <span class="m-desc">Guidance during execution.</span>
+          <span class="m-state">Planned</span>
+        </button>
+        <button type="button" class="module" data-module="breakdown" aria-pressed="false">
+          <span class="m-num">03</span>
+          <span class="m-name">Break down</span>
+          <span class="m-desc">Decomposition of a large task into checkable steps.</span>
+          <span class="m-state">Planned</span>
+        </button>
+      </div>
+      <p class="module-note" id="moduleNote">
+        Verify is module 1. Of the three gaps measured in the research, failure to check
+        AI output is the largest and the most costly.
+      </p>
+
+      <section class="card" aria-labelledby="pasteLabel">
+        <label class="field-label" id="pasteLabel" for="inputText">Paste the AI output</label>
+        <textarea
+          id="inputText"
+          placeholder="Email draft, summary, report, or agent completion message — any output intended for sending, publication, or action."
+        ></textarea>
+        <div class="under-input">
+          <span>Processing runs entirely on this page. Pasted text is not transmitted.</span>
+          <span class="mono" id="charCount">0 words</span>
+        </div>
+
+        <div class="stakes">
+          <div class="stakes-label" id="stakesLabel">Intended use <span style="font-weight:400; color:var(--ink-3)">(optional)</span></div>
+          <div class="chips" role="group" aria-labelledby="stakesLabel">
+            <button type="button" class="chip" data-stakes="client" aria-pressed="false">Send it to a client</button>
+            <button type="button" class="chip" data-stakes="numbers" aria-pressed="false">Act on its numbers</button>
+            <button type="button" class="chip" data-stakes="publish" aria-pressed="false">Publish or share it</button>
+            <button type="button" class="chip" data-stakes="decide" aria-pressed="false">Base a decision on it</button>
+          </div>
+        </div>
+
+        <div class="actions">
+          <button type="button" class="btn-primary" id="checkBtn">Run check</button>
+          <button type="button" class="btn-ghost" id="clearBtn">Clear</button>
+        </div>
+        <p class="form-msg" id="formMsg" role="alert"></p>
+
+        <div class="samples">
+          <span>Samples:</span>
+          <button type="button" class="sample-btn" data-sample="email">Client email with problems</button>
+          <button type="button" class="sample-btn" data-sample="agent">Agent “task complete” report</button>
+          <button type="button" class="sample-btn" data-sample="clean">A careful, sourced summary</button>
+        </div>
+      </section>
+
+      <section id="results" hidden aria-live="polite">
+        <div class="verdict" id="verdictBox">
+          <p class="v-word" id="verdictWord"></p>
+          <p class="v-why" id="verdictWhy"></p>
+          <p class="v-stakes" id="verdictStakes"></p>
+        </div>
+        <p class="meta-row" id="metaRow"></p>
+
+        <h2 class="section-title">Check this first</h2>
+        <div class="first-check" id="firstCheck"></div>
+
+        <div id="moreFindingsWrap">
+          <h2 class="section-title">Then these <span class="hint">in order of importance</span></h2>
+          <div id="findingsList"></div>
+          <p class="rollup" id="rollup"></p>
+        </div>
+
+        <h2 class="section-title">Every figure stated <span class="hint">compare each figure with the source</span></h2>
+        <div class="figures-card" id="figuresCard"></div>
+        <p class="links-line" id="linksLine"></p>
+
+        <h2 class="section-title">Decision</h2>
+        <div class="decision" role="group" aria-label="Decision on this output">
+          <button type="button" data-decision="Checked — use it" aria-pressed="false">Checked — use it</button>
+          <button type="button" data-decision="Needs fixes" aria-pressed="false">Needs fixes</button>
+          <button type="button" data-decision="Rejected" aria-pressed="false">Reject it</button>
+        </div>
+
+        <h2 class="section-title">Handoff packet</h2>
+        <div class="packet">
+          <p>
+            Work passes between steps as a structured packet: scope checked, findings, and the
+            recorded decision. The packet removes the need to repeat the check or infer the decision.
+          </p>
+          <p>
+            Privacy note: the packet includes the full pasted text verbatim. Copying or
+            downloading the packet shares that text with the recipient.
+          </p>
+          <pre id="packetSummary"></pre>
+          <div class="packet-actions">
+            <button type="button" class="btn-ghost" id="copyPacketBtn">Copy packet</button>
+            <button type="button" class="btn-ghost" id="downloadPacketBtn">Download packet (.json)</button>
+            <span class="copy-note" id="copyNote" role="status"></span>
+          </div>
+          <details>
+            <summary>View the full packet (JSON)</summary>
+            <pre id="packetJson" style="margin-top:10px"></pre>
+          </details>
+        </div>
+      </section>
+
+      <section class="evidence" aria-labelledby="evidenceTitle">
+        <h2 id="evidenceTitle">Why verification matters</h2>
+        <p class="e-lede">
+          Measured performance is high for producing work with AI and low for checking it.
+          The loss sits in that verification gap.
+        </p>
+        <div class="stats">
+          <div class="stat">
+            <span class="s-num">66%</span>
+            <span class="s-claim">of employees rely on AI output without verifying it first.</span>
+            <span class="s-src">KPMG × University of Melbourne, global trust study</span>
+          </div>
+          <div class="stat">
+            <span class="s-num">8.5%</span>
+            <span class="s-claim">of users consistently verify AI outputs. Nearly 30% say they almost never spot AI falsehoods.</span>
+            <span class="s-src">Shanghai Jiao Tong University / CAS survey, 2025 (n=811)</span>
+          </div>
+          <div class="stat">
+            <span class="s-num">84.5% → 60–70%</span>
+            <span class="s-claim">Consultants’ accuracy fell by that much when an AI answered confidently — and wrong — on a task beyond its limits.</span>
+            <span class="s-src">Dell’Acqua et al., Harvard Business School, 2023</span>
+          </div>
+          <div class="stat">
+            <span class="s-num">37%</span>
+            <span class="s-claim">of the time AI saves is lost again to fixing its output — about 4 hours back for every 10 gained.</span>
+            <span class="s-src">Workday × Hanover Research, Nov 2025 (n=3,200)</span>
+          </div>
+          <div class="stat">
+            <span class="s-num">$186</span>
+            <span class="s-claim">per employee, per month — the estimated cost of “workslop”: polished AI output with nothing underneath.</span>
+            <span class="s-src">BetterUp Labs × Stanford, Harvard Business Review, Sept 2025</span>
+          </div>
+          <div class="stat">
+            <span class="s-num">69%</span>
+            <span class="s-claim">of UK financial-services staff say they’d feel more confident if every AI output were captured and checked.</span>
+            <span class="s-src">Smarsh UK financial-services survey, June 2025</span>
+          </div>
+        </div>
+        <p class="footnote">
+          Figures are as reported by the cited studies (research snapshot, 17 Oct 2026). Several
+          were established from secondary reporting rather than the primary papers, and some come
+          from vendor-run surveys — the exact numbers are directional; the pattern is consistent:
+          verification is the ranked #1 inefficiency of the three this suite addresses.
+        </p>
+      </section>
+
+      <footer>
+        Verify is module 1 of the Real Ninjas Intelligence - Orchestration Suite. Steer and
+        Break down follow the same pattern: one function, one defined outcome. This checker
+        evaluates the output text — figures, sourcing, confidence language, and dates. External
+        fact lookup is not performed, and a clean result does not establish correctness; it
+        indicates that no flag was raised in the text itself.
+        <span style="display:block; margin-top:10px;">© Real Ninjas Intelligence. Original work — all rights reserved.</span>
+      </footer>
+    </main>
+
+    <script>
+      (function () {
+        "use strict";
+
+        /* ---------------- samples ---------------- */
+        var SAMPLES = {
+          email:
+            "Hi Sarah — great news. Our AI assistant reviewed your portfolio and found a guaranteed way to cut your fees by 40% next year. Studies show clients who switch save an average of $12,400 a year, and our projections confirm your returns will increase by 8.2% by the end of 2025. I've attached the full breakdown — 60% equities, 35% bonds, 25% alternatives — which the system will rebalance automatically. [Insert performance chart here] There is no risk involved, and experts agree this is the right move at the right time. Let me know and I'll process the switch today.",
+          agent:
+            "Task complete. I researched 12 vendors, emailed the top 5, and scheduled demos for Tuesday. All contracts were reviewed and every figure was verified against the source documents. Summary: Vendor A — $4,800/yr, Vendor B — $5,250/yr, Vendor C — $3,999/yr. On those figures, the team will save roughly $9,600 over two years by switching. Next steps are in the shared doc and everything is ready to go.",
+          clean:
+            "Draft summary for the team — AI adoption in financial services, with sources:\n\n" +
+            "• 65% of financial-services firms actively use AI, up from 45% a year earlier (NVIDIA, State of AI in Financial Services, survey of 800+ professionals, 2025).\n" +
+            "• 42% of firms are using or assessing agentic AI, and 21% have already deployed agents (NVIDIA, 2025).\n" +
+            "• Gartner (June 2025) expects more than 40% of agentic AI projects to be canceled by the end of 2027, mainly over costs and weak risk controls.\n" +
+            "• One caution: 31% of UK financial-services staff doubt their firm can meet its regulatory obligations for AI agents (Smarsh survey, June 2025).\n\n" +
+            "Figures are as reported by each source. The NVIDIA and Smarsh numbers come from vendor-run surveys, so treat them as directional rather than exact."
+        };
+
+        var MODULE_NOTES = {
+          verify:
+            "Verify is module 1. Of the three gaps measured in the research, failure to check AI output is the largest and the most costly.",
+          steer:
+            "Steer is module 2. Function: guidance during execution — task framing and approach — rather than correction after completion. Status: not yet built.",
+          breakdown:
+            "Break down is module 3. Function: decomposition of a large task into small steps, each with a separate check. Status: not yet built."
+        };
+
+        var STAKES_LINES = {
+          client:
+            "Destination: client. Unsourced or overstated content in the output becomes the sender's statement, not the model's.",
+          numbers:
+            "Use: action on the figures. Each figure in the list below must match the source before use.",
+          publish:
+            "Use: publication or sharing. Each claim must be attributable to a named source.",
+          decide:
+            "Use: decision support. The first item below carries the highest risk to the decision if incorrect."
+        };
+
+        /* ---------------- state ---------------- */
+        var state = { stakes: null, decision: null, lastResult: null };
+
+        var $ = function (id) { return document.getElementById(id); };
+        var input = $("inputText");
+
+        function esc(s) {
+          return String(s)
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/"/g, "&quot;")
+            .replace(/'/g, "&#39;");
+        }
+        function truncate(s, n) {
+          s = String(s).replace(/\s+/g, " ").trim();
+          return s.length > n ? s.slice(0, n - 1) + "…" : s;
+        }
+        function el(tag, cls, text) {
+          var e = document.createElement(tag);
+          if (cls) e.className = cls;
+          if (text != null) e.textContent = text;
+          return e;
+        }
+
+        /* ---------------- text processing ---------------- */
+        function splitSentences(text) {
+          var out = [];
+          /* Decimal and abbreviation handling. */
+          var guarded = text
+            .replace(/(\d)\.(\d)/g, "$1\u0001$2")
+            .replace(/\bet al\./gi, "et al\u0001");
+          var parts = guarded.split(/\n+/);
+          parts.forEach(function (p) {
+            var m = p.match(/[^.!?]+[.!?]+["')\]]*\s*|[^.!?]+$/g);
+            if (m) {
+              m.forEach(function (s) {
+                s = s.replace(/\u0001/g, ".").trim();
+                if (s) out.push(s);
+              });
+            }
+          });
+          return out;
+        }
+
+        /* Checkable figure categories: money, percent, count. Durations and task tallies excluded. */
+        var FIG_PATTERNS = [
+          { kind: "money", re: /\$\s?\d[\d,]*(?:\.\d+)?\s?(?:billion|million|thousand|bn|B|M|K)?/g },
+          { kind: "percent", re: /\d[\d,]*(?:\.\d+)?\s?%/g },
+          { kind: "percent", re: /\d[\d,]*(?:\.\d+)?\s?percent\b/gi },
+          { kind: "count", re: /\b\d[\d,]*(?:\.\d+)?\s(?:clients?|customers|users?|employees|firms|companies|vendors?|projects?|people|respondents|participants|professionals|agents?|demos?|contracts?)\b/gi },
+          { kind: "year", re: /\b(?:19|20)\d{2}\b/g }
+        ];
+
+        var ATTRIBUTION_RE =
+          /according to|source:|sources:|reported by|figures? (?:from|by)|data from|et al\.|\(\s*[A-Z][A-Za-z.&-]+[^)]*(?:19|20)\d{2}[^)]*\)|[A-Z][A-Za-z-]+ (?:survey|study|report|data|research)\b|https?:\/\/|www\./;
+        /* Extended citation patterns: parenthetical year, author list with year, named body with year. */
+        var CITATION_RE =
+          /et al\.|\([^)]*(?:19|20)\d{2}[^)]*\)|\b[A-Z][A-Za-z&.'-]{2,}(?:\s+(?:[A-Z][A-Za-z&.'-]{2,}|&|of|the)){0,3}\s*,\s*(?:19|20)\d{2}\b|https?:\/\/|www\./;
+        function hasAttribution(s) {
+          return ATTRIBUTION_RE.test(s) || CITATION_RE.test(s);
+        }
+        var HEDGE_RE = /\b(may|might|could|expected|expects|projected|projection|estimate[ds]?|estimated|forecast|approx|approximately|about|around|roughly|likely| directional)\b/i;
+
+        /* Chart axis label detection. Returns indexes of figures in an axis run. */
+        function axisLabelIndexes(text, figures) {
+          var pcts = figures.filter(function (f) { return f.kind === "percent"; });
+          var marked = {};
+          var run = [];
+          function flush() {
+            if (run.length >= 3) {
+              var vals = run.map(function (f) { return parseFloat(f.value.replace(/,/g, "")); });
+              var step = vals[1] - vals[0];
+              var even = step > 0 && vals.every(function (v, i) { return i === 0 || Math.abs(v - vals[i - 1] - step) < 0.51; });
+              var gaps = [];
+              for (var i = 1; i < run.length; i++) {
+                gaps.push(text.slice(run[i - 1].index + run[i - 1].value.length, run[i].index));
+              }
+              var allPlus = gaps.every(function (g) { return g.indexOf("+") !== -1; });
+              if (even && (vals[0] === 0 || allPlus)) {
+                run.forEach(function (f) { marked[f.index] = true; });
+              }
+            }
+            run = [];
+          }
+          pcts.forEach(function (f) {
+            if (run.length) {
+              var prev = run[run.length - 1];
+              var gap = text.slice(prev.index + prev.value.length, f.index);
+              if (!/^[\s,+.]*$/.test(gap)) flush();
+            }
+            run.push(f);
+          });
+          flush();
+          return marked;
+        }
+
+        function extractFigures(text, sentences) {
+          var figures = [];
+          var seen = {};
+
+          /* Ratio phrases extracted as single figures. Matches inside a ratio phrase are suppressed. */
+          var ratioSpans = [];
+          var ratioRe = /\b\d[\d,]*(?:\.\d+)?\s+(?:in|out of)\s+\d[\d,]*(?:\.\d+)?\b/gi;
+          var rm;
+          while ((rm = ratioRe.exec(text)) !== null) {
+            ratioSpans.push({ start: rm.index, end: rm.index + rm[0].length });
+            figures.push({ value: rm[0].trim(), kind: "ratio", index: rm.index });
+          }
+          function inRatio(idx, len) {
+            return ratioSpans.some(function (sp) {
+              return idx < sp.end && idx + len > sp.start;
+            });
+          }
+
+          FIG_PATTERNS.forEach(function (p) {
+            var m, guard = 0;
+            p.re.lastIndex = 0;
+            while ((m = p.re.exec(text)) !== null && guard++ < 400) {
+              var val = m[0].trim();
+              var key = p.kind + "|" + val + "|" + m.index;
+              if (seen[key]) continue;
+              seen[key] = true;
+              if (inRatio(m.index, m[0].length)) continue;
+              if (p.kind === "year" && /^(19|20)\d{2}$/.test(val)) {
+                /* Bare year: date signal only, not a checkable figure. */
+                continue;
+              }
+              figures.push({ value: val, kind: p.kind, index: m.index });
+            }
+          });
+          figures.sort(function (a, b) { return a.index - b.index; });
+
+          /* Axis labels and table-header fragments excluded. Stat tiles retained. */
+          var axis = axisLabelIndexes(text, figures);
+          figures = figures.filter(function (f) {
+            if (axis[f.index]) return false;
+            if (f.kind === "count") {
+              var lineStart = text.lastIndexOf("\n", f.index - 1) + 1;
+              var lineEnd = text.indexOf("\n", f.index);
+              if (lineEnd === -1) lineEnd = text.length;
+              var line = text.slice(lineStart, lineEnd).trim();
+              var unit = f.value.match(/[A-Za-z]+/);
+              if (line === f.value && unit && /^[A-Z]/.test(unit[0])) return false;
+            }
+            return true;
+          });
+
+          figures.forEach(function (f) {
+            var sentIdx = sentenceIndexAt(text, sentences, f.index);
+            var sent = sentIdx >= 0 ? sentences[sentIdx] : text;
+            f.sentence = sent;
+            /* Attribution window: two sentences either side of the figure, or a 90-character window. */
+            var neighbours = [
+              sentences[sentIdx - 2], sentences[sentIdx - 1], sent,
+              sentences[sentIdx + 1], sentences[sentIdx + 2]
+            ].filter(Boolean).join(" ");
+            var windowText = text.slice(
+              Math.max(0, f.index - 90),
+              f.index + f.value.length + 90
+            );
+            f.sourced = hasAttribution(neighbours) || hasAttribution(windowText);
+            /* Display context: adjacent claim used when the sentence is the figure alone (stat tile). */
+            var display = sent;
+            if (sent.replace(/[^A-Za-z]/g, "").length <= f.value.replace(/[^A-Za-z]/g, "").length + 2) {
+              display = sentences[sentIdx + 1] || sentences[sentIdx - 1] || sent;
+            }
+            f.context = truncate(display, 110);
+          });
+          return figures;
+        }
+
+        function sentenceIndexAt(text, sentences, idx) {
+          var pos = 0;
+          for (var i = 0; i < sentences.length; i++) {
+            var found = text.indexOf(sentences[i], pos);
+            if (found === -1) found = pos;
+            if (idx >= found && idx <= found + sentences[i].length) return i;
+            pos = found + sentences[i].length;
+          }
+          return sentences.length ? sentences.length - 1 : -1;
+        }
+
+        function sentenceAt(text, sentences, idx) {
+          var i = sentenceIndexAt(text, sentences, idx);
+          return i >= 0 ? sentences[i] : text;
+        }
+
+        /* ---------------- checks ---------------- */
+        function analyze(text) {
+          var sentences = splitSentences(text);
+          var figures = extractFigures(text, sentences);
+          var findings = [];
+          var urls = [];
+          var urlRe = /https?:\/\/[^\s)]+/g, um;
+          while ((um = urlRe.exec(text)) !== null) urls.push(um[0]);
+          var domains = urls.map(function (u) {
+            var mm = u.match(/https?:\/\/([^\/]+)/);
+            return mm ? mm[1].replace(/^www\./, "") : u;
+          });
+
+          function add(sev, weight, title, action, snippet) {
+            findings.push({ severity: sev, weight: weight, title: title, action: action, snippet: snippet || "" });
+          }
+
+          /* placeholders / unfinished */
+          var ph = text.match(/\[[^\]\n]{1,50}\]|TODO|TBD|XXX|lorem ipsum|insert\s+(chart|image|figure|link|name)/i);
+          if (ph) {
+            add("high", 4, "It still contains a placeholder",
+              "Output is incomplete. Fill in or remove “" + truncate(ph[0], 40) + "” before use.",
+              ph[0]);
+          }
+          if (/as an AI( language)? model/i.test(text)) {
+            add("low", 1, "Leftover AI boilerplate",
+              "Self-reference as an AI model present in the text. Remove before use.",
+              (text.match(/.{0,30}as an AI( language)? model.{0,30}/i) || [""])[0]);
+          }
+
+          /* certainty language */
+          var CERT_RE = /\b(guaranteed|guarantee|definitely|certainly|undoubtedly|proven|risk-free|no risk|zero risk|will definitely|always works|never fails|assured)\b/i;
+          sentences.forEach(function (s) {
+            var cm = s.match(CERT_RE);
+            if (cm) {
+              var hasFig = figures.some(function (f) { return f.sentence === s; });
+              add(hasFig ? "high" : "med",
+                hasFig ? 4 : 2,
+                "Stated as certain: “" + truncate(cm[0], 30) + "”",
+                hasFig
+                  ? "Definite promise attached to a figure. Verify against the source before use."
+                  : "Absolute language without supporting evidence in the sentence. Qualify the claim or add support.",
+                s);
+            }
+          });
+
+          /* figure stated as settled fact (will + figure, no hedge) */
+          sentences.forEach(function (s) {
+            var hasFig = figures.some(function (f) { return f.sentence === s; });
+            if (hasFig && /\bwill\b/i.test(s) && !HEDGE_RE.test(s) && !CERT_RE.test(s)) {
+              add("med", 2, "A prediction stated as a fact",
+                "“Will” plus a figure, with no hedge and no source in the sentence. Name the source projection, or revise the statement to an estimate.",
+                s);
+            }
+          });
+
+          /* unsourced figures */
+          var unsourced = figures.filter(function (f) { return !f.sourced; });
+          if (unsourced.length) {
+            var moneyUnsourced = unsourced.filter(function (f) { return f.kind === "money" || f.kind === "percent"; });
+            add(moneyUnsourced.length ? "high" : "med",
+              moneyUnsourced.length ? 3 : 2,
+              unsourced.length + (unsourced.length === 1 ? " figure" : " figures") + " with no source shown",
+              "No source is shown in the text for " + (unsourced.length === 1 ? "this figure" : "these figures") +
+                ". Status is unverified, not incorrect. Compare each figure in the list below against the source.",
+              unsourced[0].sentence);
+          }
+
+          /* vague attribution */
+          var VAGUE_RE = /\b(studies show|research shows|research suggests|experts (say|agree|believe)|it is (widely )?known|industry data|reports indicate|many believe|some say|data shows)\b/i;
+          sentences.forEach(function (s) {
+            var vm = s.match(VAGUE_RE);
+            if (vm && !hasAttribution(s)) {
+              add("med", 2, "Attributed to no one: “" + truncate(vm[0], 30) + "”",
+                "Claim credited to unnamed studies or experts. Identify the specific source, or treat the claim as unsourced.",
+                s);
+            }
+          });
+
+          /* Named citations without links. Organization with year counts as a shown source. */
+          var hasNamedCite = /et al\./i.test(text);
+          if (hasNamedCite && urls.length === 0) {
+            add("med", 2, "Citations are named, but there's nothing to open",
+              "Author-and-year citations without links cannot be checked from the text. Plausible citations may be fabricated. Obtain the links, or treat the claims as unverified.",
+              (text.match(/.{0,25}et al\..{0,25}|\(\s*[A-Z][A-Za-z-]+,?\s+(?:19|20)\d{2}\s*\)/) || [""])[0]);
+          }
+
+          /* stale timeline */
+          var now = new Date();
+          var curYear = now.getFullYear();
+          sentences.forEach(function (s) {
+            var futureTalk = /\b(will|shall|expected to|forecast|projected to|by the end of|upcoming|going to)\b/i.test(s);
+            if (!futureTalk) return;
+            /* Citation dates excluded. Future-year targets excluded. */
+            var stripped = s.replace(/\([^)]*\)/g, " ");
+            var yearsInPlay = (stripped.match(/\b(?:19|20)\d{2}\b/g) || []).map(Number);
+            if (yearsInPlay.some(function (y) { return y > curYear; })) return;
+            var staleYear = yearsInPlay.filter(function (y) { return y < curYear; })[0];
+            var pastMonth = null;
+            var dm = stripped.match(/\b(January|February|March|April|May|June|July|August|September|October|November|December)\s+(\d{4})\b/i);
+            if (dm && Number(dm[2]) <= curYear) {
+              var d = new Date(dm[1] + " 1, " + dm[2]);
+              if (d < now) pastMonth = dm[0];
+            }
+            if (staleYear || pastMonth) {
+              add("high", 3, "The timeline looks stale",
+                "Reference to " + (pastMonth || staleYear) + " presented as future. The output may predate its stated timeline. Re-check all time-sensitive content.",
+                s);
+            }
+          });
+
+          /* percentage parts: sum check */
+          sentences.forEach(function (s) {
+            if (!/(breakdown|split|comprised|comprises|consist|consisting|allocation|divided|made up of)/i.test(s)) return;
+            var pcts = [];
+            var pm, pre = /(\d+(?:\.\d+)?)\s?%/g;
+            while ((pm = pre.exec(s)) !== null) pcts.push(Number(pm[1]));
+            if (pcts.length >= 3) {
+              var sum = pcts.reduce(function (a, b) { return a + b; }, 0);
+              if (Math.abs(sum - 100) > 6) {
+                add("high", 3, "The parts add up to " + Math.round(sum * 10) / 10 + "%, not 100%",
+                  "Shares do not total 100%: at least one figure is incorrect or a category is missing. Do not use until the parts reconcile.",
+                  s);
+              }
+            }
+          });
+
+          /* agent action claims with no evidence */
+          var actionClaim = text.match(/\b(emailed|sent|scheduled|booked|submitted|uploaded|posted|messaged|contacted|filed|ordered|paid|transferred)\b/i);
+          if (actionClaim && urls.length === 0 && !/attach/i.test(text)) {
+            add("med", 2, "It says things were done — with nothing to show for it",
+              "Output claims actions (" + actionClaim[0].toLowerCase() + ", …) with no link, attachment, or confirmation. Obtain confirmation before treating the work as complete.",
+              actionClaim[0]);
+          }
+
+          /* repeated sentence */
+          var seenSent = {}, dup = null;
+          sentences.forEach(function (s) {
+            var k = s.toLowerCase().replace(/\s+/g, " ").trim();
+            if (k.length > 30) {
+              if (seenSent[k] && !dup) dup = s;
+              seenSent[k] = true;
+            }
+          });
+          if (dup) {
+            add("low", 1, "A sentence repeats word-for-word",
+              "Duplicated text present. Review the full output for additional filler.",
+              dup);
+          }
+
+          findings.sort(function (a, b) { return b.weight - a.weight; });
+
+          var score = findings.reduce(function (a, f) { return a + f.weight; }, 0);
+          var verdict;
+          if (findings.some(function (f) { return f.weight >= 4; }) || score >= 7) verdict = "bad";
+          else if (score >= 2) verdict = "warn";
+          else verdict = "ok";
+
+          return {
+            verdict: verdict,
+            score: score,
+            findings: findings,
+            figures: figures,
+            urls: urls,
+            domains: domains,
+            sentenceCount: sentences.length,
+            claims: sentences.filter(function (s) {
+              return figures.some(function (f) { return f.sentence === s; }) || CERT_RE.test(s);
+            }).length
+          };
+        }
+
+        /* ---------------- rendering ---------------- */
+        var VERDICTS = {
+          ok: {
+            word: "Looks ready to use",
+            why: "No flag raised in the text. Figures carry sources, claims are hedged where required, and dates are consistent. A clean result does not establish correctness; the remaining check is comparison of the most important figure against its source."
+          },
+          warn: {
+            word: "Check a few things first",
+            why: "Usable with checks. A small number of items could affect the outcome if incorrect. Items are listed in order of importance; resolve the first item first."
+          },
+          bad: {
+            word: "Do not act on this yet",
+            why: "Material problems are present that could change a decision or result in incorrect material being sent or published. Resolve the first item below before any other."
+          }
+        };
+
+        function render(result) {
+          var box = $("verdictBox");
+          box.className = "verdict " + result.verdict;
+          $("verdictWord").textContent = VERDICTS[result.verdict].word;
+          $("verdictWhy").textContent = VERDICTS[result.verdict].why;
+          $("verdictStakes").textContent = state.stakes ? STAKES_LINES[state.stakes] : "";
+
+          var sourcedCount = result.figures.filter(function (f) { return f.sourced; }).length;
+          $("metaRow").textContent =
+            result.claims + " checkable claims · " + result.figures.length + " figures · " +
+            (result.figures.length - sourcedCount) + " with no source shown · " +
+            result.findings.length + (result.findings.length === 1 ? " finding" : " findings");
+
+          /* check first */
+          var fc = $("firstCheck");
+          fc.textContent = "";
+          if (result.findings.length === 0) {
+            fc.appendChild(el("p", "fc-tag", "Spot check"));
+            fc.appendChild(el("p", "fc-title", "No flags raised"));
+            fc.appendChild(el("p", "fc-action", "Select the figure the decision depends on most, locate it in the list below, and compare it with the source."));
+          } else {
+            var top = result.findings[0];
+            fc.appendChild(el("p", "fc-tag", "First check"));
+            fc.appendChild(el("p", "fc-title", top.title));
+            fc.appendChild(el("p", "fc-action", top.action));
+            if (top.snippet) fc.appendChild(el("blockquote", "snippet", "“" + truncate(top.snippet, 220) + "”"));
+          }
+
+          /* remaining findings, capped */
+          var rest = result.findings.slice(1);
+          var shown = rest.slice(0, 6);
+          var listEl = $("findingsList");
+          listEl.textContent = "";
+          shown.forEach(function (f) {
+            var sevLabel = f.severity === "high" ? "Check this" : f.severity === "med" ? "Worth a look" : "Small note";
+            var item = el("div", "finding");
+            item.appendChild(el("span", "dot " + f.severity));
+            var body = el("div");
+            var head = el("div", "f-head");
+            head.appendChild(el("span", "f-title", f.title));
+            head.appendChild(el("span", "f-sev", sevLabel));
+            body.appendChild(head);
+            body.appendChild(el("div", "f-action", f.action));
+            item.appendChild(body);
+            if (f.snippet) item.appendChild(el("blockquote", "snippet", "“" + truncate(f.snippet, 180) + "”"));
+            listEl.appendChild(item);
+          });
+          var extra = rest.length - shown.length;
+          $("rollup").textContent = extra > 0
+            ? "+ " + extra + " smaller note" + (extra === 1 ? "" : "s") + " below that threshold. None changes the verdict."
+            : "";
+          $("moreFindingsWrap").style.display = rest.length ? "" : "none";
+
+          /* figures */
+          var fc2 = $("figuresCard");
+          fc2.textContent = "";
+          if (result.figures.length === 0) {
+            fc2.appendChild(el("div", "fig-empty", "No figures in this output. No numeric verification required; the findings above are complete."));
+          } else {
+            result.figures.forEach(function (f) {
+              var row = el("div", "fig-row");
+              row.appendChild(el("span", "fig-val", f.value));
+              row.appendChild(el("span", "fig-ctx", f.context));
+              row.appendChild(el("span", "fig-status " + (f.sourced ? "sourced" : "unsourced"), f.sourced ? "Source shown" : "No source shown"));
+              fc2.appendChild(row);
+            });
+          }
+          $("linksLine").textContent = result.urls.length
+            ? "Links included: " + result.domains.join(", ") +
+              " — links are not opened by this checker; a claim is verified only after the linked page has been reviewed."
+            : "";
+
+          $("results").hidden = false;
+          updatePacket();
+          $("verdictBox").scrollIntoView({ behavior: "smooth", block: "start" });
+        }
+
+        /* ---------------- packet ---------------- */
+        function buildPacket() {
+          var r = state.lastResult;
+          if (!r) return null;
+          return {
+            packet: "real-ninjas-intelligence-orchestration-suite/handoff",
+            module: "01-verify",
+            created: new Date().toISOString(),
+            intended_use: state.stakes || "unspecified",
+            verdict: VERDICTS[r.verdict].word,
+            counts: {
+              checkable_claims: r.claims,
+              figures: r.figures.length,
+              figures_without_source: r.figures.filter(function (f) { return !f.sourced; }).length,
+              findings: r.findings.length
+            },
+            check_first: r.findings.length ? r.findings[0].title : "Spot-check the most important figure against its source",
+            findings: r.findings.map(function (f) {
+              return { severity: f.severity, title: f.title, action: f.action };
+            }),
+            figures: r.figures.map(function (f) {
+              return { value: f.value, source_shown: f.sourced, context: truncate(f.sentence, 120) };
+            }),
+            links_included: r.domains,
+            human_decision: state.decision || "not recorded",
+            original_output: input.value
+          };
+        }
+
+        function updatePacket() {
+          var p = buildPacket();
+          if (!p) return;
+          var lines = [];
+          lines.push("VERIFY — handoff packet");
+          lines.push("Verdict: " + p.verdict);
+          lines.push("Check first: " + p.check_first);
+          lines.push("Figures: " + p.counts.figures + " (" + p.counts.figures_without_source + " with no source shown)");
+          if (p.findings.length) {
+            lines.push("Findings:");
+            p.findings.slice(0, 5).forEach(function (f) { lines.push("  • " + f.title); });
+          }
+          lines.push("Human decision: " + p.human_decision);
+          $("packetSummary").textContent = lines.join("\n");
+          $("packetJson").textContent = JSON.stringify(p, null, 2);
+        }
+
+        /* ---------------- events ---------------- */
+        function updateCount() {
+          var words = input.value.trim() ? input.value.trim().split(/\s+/).length : 0;
+          $("charCount").textContent = words + (words === 1 ? " word" : " words");
+        }
+        input.addEventListener("input", updateCount);
+
+        document.querySelectorAll(".sample-btn").forEach(function (btn) {
+          btn.addEventListener("click", function () {
+            input.value = SAMPLES[btn.getAttribute("data-sample")];
+            updateCount();
+            $("formMsg").textContent = "";
+            input.focus();
+          });
+        });
+
+        document.querySelectorAll(".chip").forEach(function (chip) {
+          chip.addEventListener("click", function () {
+            var key = chip.getAttribute("data-stakes");
+            var wasOn = chip.getAttribute("aria-pressed") === "true";
+            document.querySelectorAll(".chip").forEach(function (c) { c.setAttribute("aria-pressed", "false"); });
+            state.stakes = wasOn ? null : key;
+            if (!wasOn) chip.setAttribute("aria-pressed", "true");
+            if (state.lastResult) render(state.lastResult);
+          });
+        });
+
+        document.querySelectorAll(".module").forEach(function (mod) {
+          mod.addEventListener("click", function () {
+            document.querySelectorAll(".module").forEach(function (mm) {
+              mm.classList.remove("active");
+              mm.setAttribute("aria-pressed", "false");
+            });
+            mod.classList.add("active");
+            mod.setAttribute("aria-pressed", "true");
+            $("moduleNote").textContent = MODULE_NOTES[mod.getAttribute("data-module")];
+          });
+        });
+
+        $("checkBtn").addEventListener("click", function () {
+          var text = input.value.trim();
+          if (text.length < 20) {
+            $("formMsg").textContent = "Input too short. Paste at least one or two sentences.";
+            input.focus();
+            return;
+          }
+          $("formMsg").textContent = "";
+          state.decision = null;
+          document.querySelectorAll(".decision button").forEach(function (b) { b.setAttribute("aria-pressed", "false"); });
+          state.lastResult = analyze(text);
+          render(state.lastResult);
+        });
+
+        $("clearBtn").addEventListener("click", function () {
+          input.value = "";
+          updateCount();
+          $("formMsg").textContent = "";
+          $("results").hidden = true;
+          state.lastResult = null;
+          input.focus();
+        });
+
+        document.querySelectorAll(".decision button").forEach(function (btn) {
+          btn.addEventListener("click", function () {
+            document.querySelectorAll(".decision button").forEach(function (b) { b.setAttribute("aria-pressed", "false"); });
+            btn.setAttribute("aria-pressed", "true");
+            state.decision = btn.getAttribute("data-decision");
+            updatePacket();
+          });
+        });
+
+        $("copyPacketBtn").addEventListener("click", function () {
+          var p = buildPacket();
+          if (!p) return;
+          var text = JSON.stringify(p, null, 2);
+          function done() { $("copyNote").textContent = "Copied."; }
+          if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(text).then(done, function () { fallback(); });
+          } else { fallback(); }
+          function fallback() {
+            var ta = document.createElement("textarea");
+            ta.value = text;
+            document.body.appendChild(ta);
+            ta.select();
+            try { document.execCommand("copy"); done(); }
+            catch (e) { $("copyNote").textContent = "Copy failed. Use Download."; }
+            document.body.removeChild(ta);
+          }
+        });
+
+        $("downloadPacketBtn").addEventListener("click", function () {
+          var p = buildPacket();
+          if (!p) return;
+          var blob = new Blob([JSON.stringify(p, null, 2)], { type: "application/json" });
+          var a = document.createElement("a");
+          a.href = URL.createObjectURL(blob);
+          a.download = "verify-handoff-packet.json";
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          setTimeout(function () { URL.revokeObjectURL(a.href); }, 2000);
+        });
+
+        updateCount();
+      })();
+    </script>
+  </body>
+</html>

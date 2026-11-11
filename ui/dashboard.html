@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data:; connect-src 'self'">
+<title>Compact Checkout — Token Savings</title>
+<link rel="stylesheet" href="vendor/ag-grid.css">
+<link rel="stylesheet" href="vendor/ag-theme-quartz.css">
+<style>
+  :root{
+    --ink:#14181d; --mut:#5b6570; --line:#d7dce1; --bg:#f4f6f8; --card:#ffffff;
+    --ok:#0e7a3d; --okbg:#e5f4ec; --bad:#b3261e; --badbg:#fbeae9;
+    --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;background:var(--bg);color:var(--ink)}
+  header{padding:14px 16px 6px}
+  h1{font-size:20px;margin:0}
+  .sub{color:var(--mut);font-size:13px;margin-top:2px}
+  .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;padding:10px 16px 2px}
+  .stat{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px}
+  .stat .k{font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--mut)}
+  .stat .v{font-size:26px;font-weight:700;margin-top:4px;font-variant-numeric:tabular-nums}
+  .stat .s{font-size:12px;color:var(--mut);margin-top:2px}
+  main{display:grid;grid-template-columns:1fr;gap:12px;padding:12px 16px 20px}
+  section{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px}
+  h2{font-size:13px;letter-spacing:.06em;text-transform:uppercase;color:var(--mut);margin:0 0 10px}
+  .grid{width:100%}
+  #scenarioGrid{height:225px}
+  #sweepGrid{height:310px}
+  .chip{font-size:11px;font-weight:700;letter-spacing:.05em;padding:2px 8px;border-radius:999px;text-transform:uppercase}
+  .chip.pass{background:var(--okbg);color:var(--ok)}
+  .chip.fail{background:var(--badbg);color:var(--bad)}
+  .mono{font-family:var(--mono);font-size:12px}
+  .empty{color:var(--mut);font-size:14px;padding:8px 0}
+  .foot{padding:0 16px 16px;color:var(--mut);font-size:12px}
+  .ag-theme-quartz{--ag-font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;--ag-border-color:var(--line);--ag-header-background-color:#eef1f4;--ag-row-hover-color:#f0f4fa}
+  @media (max-width:900px){ .stats{grid-template-columns:1fr 1fr} }
+  @media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<header>
+  <h1>Compact Checkout — Token Savings</h1>
+  <div class="sub">Measured · tiktoken o200k_base</div>
+</header>
+
+<div class="stats">
+  <div class="stat"><div class="k">Flagship ratio</div><div class="v" id="statRatio">—</div><div class="s" id="statRatioSub">—</div></div>
+  <div class="stat"><div class="k">Tokens saved · scenarios</div><div class="v" id="statSaved">—</div><div class="s" id="statSavedSub">—</div></div>
+  <div class="stat"><div class="k">Best sweep ratio</div><div class="v" id="statSweep">—</div><div class="s" id="statSweepSub">—</div></div>
+  <div class="stat"><div class="k">Saved · largest basket</div><div class="v" id="statSweepSaved">—</div><div class="s" id="statSweepSavedSub">—</div></div>
+</div>
+
+<main>
+  <section>
+    <h2>Scenarios</h2>
+    <div id="scenarioGrid" class="ag-theme-quartz grid"></div>
+    <div id="scenarioEmpty" class="empty" hidden>No data — run dashboard_data.py</div>
+  </section>
+  <section>
+    <h2>Basket size sweep</h2>
+    <div id="sweepGrid" class="ag-theme-quartz grid"></div>
+    <div id="sweepEmpty" class="empty" hidden>No data — run dashboard_data.py</div>
+  </section>
+</main>
+
+<div class="foot">AG Grid Community · vendored locally</div>
+
+<script src="vendor/ag-grid-community.min.js"></script>
+<script src="dashboard-data.js"></script>
+<script src="dashboard.js"></script>
+</body>
+</html>
