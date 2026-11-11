@@ -285,6 +285,10 @@ savings dashboard; PayPal Orders v2 API (sandbox) for capture.
 
 Hackathon prototype. Encoder, decoder, mandate gate, scenarios, lossless
 round-trip battery, and the PayPal payments layer are complete. Sandbox
-wiring is complete; the mock adapter runs the full flow today, and a live
-sandbox capture runs as soon as sandbox credentials are present in the
-environment.
+wiring is complete; the mock adapter runs the full flow today.
+
+Live sandbox capture — verified 2026-11-11: scenario S1 (grocery),
+gate approved, packet checksum `2fd97b92`, PayPal sandbox order
+`7TS33941CP075764J`, payer approved in the sandbox checkout flow, capture
+COMPLETED, transaction `3PG84047F4385863A`, amount $134.24 (13424 cents,
+USD) — exactly the packet total the buyer approved.
